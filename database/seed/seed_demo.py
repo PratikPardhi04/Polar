@@ -99,15 +99,20 @@ def seed_stations(db: Session):
 
 
 def seed_expedition(db: Session, admin_id: str):
-    if not db.query(Expedition).filter(Expedition.id == EXP_ID).first():
+    exp = db.query(Expedition).filter(Expedition.id == EXP_ID).first()
+    if not exp:
         expedition_service.create_expedition(
             db, ExpeditionCreate(id=EXP_ID, name="46th Indian Scientific Expedition to Antarctica", primary_station_id="BHARATI", mission_type="Polar Environmental Monitoring", description="Demo expedition — Bharati station focus", source=DataSource.SYNTHETIC_DEMO), actor_id=admin_id,
         )
         exp = db.query(Expedition).filter(Expedition.id == EXP_ID).first()
-        for to in (ExpeditionStatus.PLANNED, ExpeditionStatus.ACTIVE):
-            from app.schemas.expedition import ExpeditionUpdate
+    from app.models.expedition import ExpeditionStatus
+    from app.schemas.expedition import ExpeditionUpdate
 
-            expedition_service.patch_expedition(db, exp, ExpeditionUpdate(status=to), actor_id=admin_id)
+    order = [ExpeditionStatus.DRAFT, ExpeditionStatus.PLANNED, ExpeditionStatus.ACTIVE]
+    cur = exp.status.value if hasattr(exp.status, "value") else str(exp.status)
+    start = ([s.value for s in order].index(cur) + 1) if cur in [s.value for s in order] else 0
+    for to in order[start:]:
+        expedition_service.patch_expedition(db, exp, ExpeditionUpdate(status=to), actor_id=admin_id)
 
 
 def seed_personnel(db: Session, admin_id: str):
@@ -121,47 +126,80 @@ def seed_personnel(db: Session, admin_id: str):
         if not person:
             person = personnel_service.create_personnel(db, PersonnelCreate(full_name=name, email=email, role=role, expedition_id=EXP_ID), actor_id=admin_id)
         target = "MISSION_READY" if i < 18 else ("MEDICAL_SCHEDULED" if i == 18 else "TRAINING_COMPLETED")
-        for state in READINESS_WALK:
-            from app.models.personnel import ReadinessState
+        current = person.current_readiness.value if hasattr(person.current_readiness, "value") else str(person.current_readiness)
+        if current != target:
+            start = READINESS_WALK.index(current) + 1 if current in READINESS_WALK else 0
+            for state in READINESS_WALK[start:]:
+                from app.models.personnel import ReadinessState
 
-            current = person.current_readiness.value if hasattr(person.current_readiness, "value") else str(person.current_readiness)
-            if current == target:
-                break
-            person = personnel_service.transition_readiness(db, person, ReadinessState(state), actor_id=admin_id, reason="demo seed")
-            if state == target:
-                break
+                person = personnel_service.transition_readiness(db, person, ReadinessState(state), actor_id=admin_id, reason="demo seed")
+                if state == target:
+                    break
         ids.append(person.id)
     return ids
+
+
+def _walk_cargo_forward(db: Session, admin_id: str, ship, pkg=None):
+    """Walk a shipment (and optionally one package) forward to IN_TRANSIT."""
+    order = NORMAL_FLOW
+    cur = ship.status.value if hasattr(ship.status, "value") else str(ship.status)
+    idx = order.index(cur) if cur in order else 0
+    for state in order[idx + 1:8]:
+        cargo_service.transition_shipment(db, ship, CargoStatus(state), actor_id=admin_id, location="Southern Ocean")
+    if pkg is not None:
+        cur = pkg.status.value if hasattr(pkg.status, "value") else str(pkg.status)
+        idx = order.index(cur) if cur in order else 0
+        for state in order[idx + 1:8]:
+            pkg, _ = cargo_service.transition_package(db, pkg, CargoStatus(state), actor_id=admin_id, location="Southern Ocean")
+    return pkg
 
 
 def seed_cargo(db: Session, admin_id: str):
     from app.models.cargo import Container, DocType, Document, Package, Shipment
 
-    if db.query(Shipment).filter(Shipment.expedition_id == EXP_ID).count() >= 3 and db.query(Package).count() >= 100:
-        return
-    for s in range(3):
-        ship = cargo_service.create_shipment(db, EXP_ID, "Goa", "Bharati", actor_id=admin_id)
+    ships = db.query(Shipment).filter(Shipment.expedition_id == EXP_ID).order_by(Shipment.created_at).all()
+    # drop empty duplicates from interrupted runs (no containers/packages/docs)
+    for extra in ships[3:]:
+        if not db.query(Container).filter(Container.shipment_id == extra.id).count() and not db.query(Package).filter(Package.shipment_id == extra.id).count() and not db.query(Document).filter(Document.shipment_id == extra.id).count():
+            db.delete(extra)
+    db.commit()
+    ships = db.query(Shipment).filter(Shipment.expedition_id == EXP_ID).order_by(Shipment.created_at).all()
+    while len(ships) < 3:
+        ships.append(cargo_service.create_shipment(db, EXP_ID, "Goa", "Bharati", actor_id=admin_id))
+    ships = ships[:3]
+    for s, ship in enumerate(ships):
         for c in range(5):
-            cargo_service.create_container(db, ship, code=f"DEMO-S{s + 1}C{c + 1}", actor_id=admin_id)
+            code = f"DEMO-S{s + 1}C{c + 1}"
+            if not db.query(Container).filter(Container.code == code).first():
+                cargo_service.create_container(db, ship, code=code, actor_id=admin_id)
+        have_docs = {d.doc_type.value if hasattr(d.doc_type, "value") else str(d.doc_type) for d in db.query(Document).filter(Document.shipment_id == ship.id).all()}
         for dt in (DocType.CARGO_DECLARATION, DocType.PACKING_LIST):
-            cargo_service.generate_document(db, ship, dt, actor_id=admin_id)
-        for state in NORMAL_FLOW[1:8]:  # DRAFT..IN_TRANSIT
-            cargo_service.transition_shipment(db, ship, CargoStatus(state), actor_id=admin_id, location="Southern Ocean")
+            if dt.value not in have_docs:
+                cargo_service.generate_document(db, ship, dt, actor_id=admin_id)
+        # refresh + walk forward (docs above unblock VERIFIED -> PACKED)
+        ship = db.query(Shipment).filter(Shipment.id == ship.id).one()
+        _walk_cargo_forward(db, admin_id, ship)
+    # finish any half-walked packages, then top up to 100 across containers
+    for pkg in db.query(Package).all():
+        cur = pkg.status.value if hasattr(pkg.status, "value") else str(pkg.status)
+        if cur in NORMAL_FLOW and NORMAL_FLOW.index(cur) < NORMAL_FLOW.index("IN_TRANSIT"):
+            ship = db.query(Shipment).filter(Shipment.id == pkg.shipment_id).one()
+            _walk_cargo_forward(db, admin_id, ship, pkg)
     containers = db.query(Container).all()
     cats = CATEGORIES
-    n = 0
-    for container in containers:
+    n = db.query(Package).count()
+    ci = 0
+    while n < 100:
+        container = containers[ci % len(containers)]
+        ci += 1
         ship = db.query(Shipment).filter(Shipment.id == container.shipment_id).one()
-        per = 7 if n + 7 <= 100 else 100 - n
-        for _ in range(per):
-            pkg, _ = cargo_service.create_package(db, container, ship, f"demo kit {n + 1}", 20.0 + (n % 30), actor_id=admin_id), None
-            for k in range(2):
-                cargo_service.add_item(db, pkg, f"demo item {n + 1}-{k + 1}", 2, "pcs", cats[(n + k) % len(cats)], actor_id=admin_id)
-            for state in NORMAL_FLOW[1:8]:
-                pkg, _ = cargo_service.transition_package(db, pkg, CargoStatus(state), actor_id=admin_id, location="Southern Ocean")
-            n += 1
-            if n >= 100:
-                return
+        pkg = cargo_service.create_package(db, container, ship, f"demo kit {n + 1}", 20.0 + (n % 30), actor_id=admin_id)
+        for k in range(2):
+            cargo_service.add_item(db, pkg, f"demo item {n + 1}-{k + 1}", 2, "pcs", cats[(n + k) % len(cats)], actor_id=admin_id)
+        _walk_cargo_forward(db, admin_id, ship, pkg)
+        n += 1
+        if n % 10 == 0:
+            print(f"seed: {n}/100 packages", flush=True)
 
 
 def seed_inventory(db: Session, admin_id: str):
@@ -326,10 +364,23 @@ def run(db: Session) -> dict:
 
 
 if __name__ == "__main__":
+    import time
+
+    from sqlalchemy.exc import OperationalError
+
     from app.database import SessionLocal
 
-    db = SessionLocal()
-    try:
-        print(run(db))
-    finally:
-        db.close()
+    last_err = None
+    for attempt in range(1, 4):
+        db = SessionLocal()
+        try:
+            print(run(db))
+            break
+        except OperationalError as exc:
+            last_err = exc
+            print(f"attempt {attempt}: connection dropped, retrying in 5s...")
+            time.sleep(5)
+        finally:
+            db.close()
+    else:
+        raise last_err

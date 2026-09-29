@@ -61,3 +61,24 @@ def ask(req: AskRequest):
         return run_question(req.question, ToolClient(token=req.backend_token))
     except Exception as exc:
         raise HTTPException(status_code=502, detail=f"agent run failed: {exc}")
+
+
+class AskLlmRequest(BaseModel):
+    question: str
+    thread_id: str = "web"
+
+
+@app.post("/ai/ask-llm")
+def ask_llm(req: AskLlmRequest):
+    """LLM graph (Groq gpt-oss-120b). Needs GROQ_API_KEY; read-only tools, and
+    the graph itself never writes — drafts become real records only through
+    the backend APPROVE endpoints."""
+    from app.graph import run_turn
+    from app.settings import settings
+
+    if not settings.GROQ_API_KEY:
+        raise HTTPException(status_code=503, detail="GROQ_API_KEY is not set — set it in ai/.env (see ai/.env.example). The deterministic POST /ai/ask path works without it.")
+    try:
+        return run_turn(req.question, thread_id=req.thread_id)
+    except Exception as exc:
+        raise HTTPException(status_code=502, detail=f"LLM agent run failed: {exc}")

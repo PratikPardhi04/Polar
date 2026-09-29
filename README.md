@@ -23,7 +23,8 @@ python -m uvicorn app.main:app --app-dir backend --reload
 ```
 
 ## Deploying (Vercel)
-See [docs/deployment.md](docs/deployment.md): backend as a serverless project
-(`backend/` root, external Postgres required), frontend as a static project,
-Vercel Cron replacing the in-process scheduler. Known serverless limits
-(no WebSocket push, ephemeral PDFs, 10 s default timeout) are documented there.
+See [docs/deployment.md](docs/deployment.md): three projects — static
+frontend (`frontend/`), serverless backend (`backend/`, external Postgres
+required), serverless AI (`ai/`) — plus Vercel Cron replacing the in-process
+scheduler. Known serverless limits (no WebSocket push, ephemeral PDFs,
+function timeouts) are documented there.

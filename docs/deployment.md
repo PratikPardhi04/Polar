@@ -1,4 +1,14 @@
-# Deploying POLARIS on Vercel
+# Deploying POLARIS on Vercel (all three services)
+
+| Project | Root Directory | Env vars |
+|---|---|---|
+| `polaris-app` (frontend, Vite preset) | `frontend/` | `VITE_API_URL`, `VITE_AI_URL` |
+| `polaris-api` (backend, Python) | `backend/` | `DATABASE_URL`, `JWT_SECRET_KEY`, `CORS_ORIGINS`, `CRON_SECRET` |
+| `polaris-ai` (AI, Python) | `ai/` | `BACKEND_URL`, `GROQ_API_KEY`, `AI_MODEL`, `AI_SERVICE_TOKEN`, `CORS_ORIGINS` |
+
+Each backend/AI project serves its `api/index.py` serverless entry (already in
+the repo — no adapter needed). The frontend needs no rewrites (hash routing).
+Deploy in dependency order: database → backend → AI → frontend.
 
 Two Vercel projects (frontend static + backend serverless). The AI service is
 optional — the dashboard degrades gracefully when it is unreachable.
@@ -59,9 +69,23 @@ manual trigger (`POST /api/v1/check-ins/advance`, ops roles).
 3. Audit → events tab shows the trail; Export CSV downloads.
 4. Ask POLARIS → if the AI service isn't deployed, you get the "is it running?" message instead of a hang.
 
-## 6. Optional: AI service as a third project
+## 6. AI service project (do this, not optional for full demo)
 
-Same recipe as §2 with Root Directory `ai/` (`ai/main.py` is the app, but
-Vercel needs it under `api/` — copy or move `main.py`+`tools.py`+`agents.py`
-into `ai/api/` with an `index.py` re-export, mirroring `backend/api/index.py`).
-Set `BACKEND_URL` to the backend URL and `CORS_ORIGINS` to the frontend URL.
+Same recipe as §2 with Root Directory `ai/` (`ai/api/index.py` already
+exports the app). Environment Variables:
+- `BACKEND_URL` = `https://polaris-api.vercel.app`
+- `GROQ_API_KEY` = your Groq key
+- `AI_MODEL` = `openai/gpt-oss-120b` (or `llama-3.1-8b-instant` for Hobby timeouts — see below)
+- `AI_SERVICE_TOKEN` = access token of a dedicated backend account (register + login once, paste token)
+- `CORS_ORIGINS` = `https://<your-frontend>.vercel.app`
+
+Timeout warning: Hobby functions cap at ~10 s and `gpt-oss-120b` reasoning
+calls usually exceed that — those requests will die. Either use Pro, set the
+fast model above, or lean on deterministic `POST /ai/ask` (instant, keyless)
+and fire one LLM question as the showpiece.
+
+## 7. What does NOT go on Vercel
+
+The Flutter app is a native mobile build — distribute via APK/TestFlight, not
+Vercel. Everything else (frontend, backend, AI, Postgres on Neon, Cron) is
+covered above.
