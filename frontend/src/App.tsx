@@ -37,22 +37,6 @@ function LoginView({ onToken }: { onToken: (t: string) => void }) {
     }
   }
 
-  async function quickLogin(qemail: string) {
-    setEmail(qemail)
-    setPassword('polaris123')
-    setErr('')
-    setBusy(true)
-    try {
-      const token = await login(qemail, 'polaris123')
-      onToken(token)
-      nav('/app')
-    } catch (ex) {
-      setErr(String(ex))
-    } finally {
-      setBusy(false)
-    }
-  }
-
   return (
     <div className="flex min-h-screen flex-col items-center justify-center bg-slate-50 px-4 font-sans text-slate-900 selection:bg-sky-500 selection:text-white">
       {/* Background Decor */}
@@ -122,28 +106,11 @@ function LoginView({ onToken }: { onToken: (t: string) => void }) {
             </button>
           </form>
 
-          <div className="mt-4 pt-4 border-t border-slate-100">
-            <p className="text-center text-[11px] font-mono text-slate-500 mb-2">
-              One-click demo login
-            </p>
-            <div className="grid grid-cols-3 gap-2">
-              {[
-                { label: 'Admin', email: 'admin@bharati.in', hint: 'full access + simulate' },
-                { label: 'Expedition Leader', email: 'leader@bharati.in', hint: 'approve + publish' },
-                { label: 'Field Leader', email: 'field@bharati.in', hint: 'missions + overrides' },
-              ].map((r) => (
-                <button
-                  key={r.email}
-                  type="button"
-                  disabled={busy}
-                  onClick={() => quickLogin(r.email)}
-                  title={`${r.email} · ${r.hint}`}
-                  className="rounded-xl border border-sky-200 bg-sky-50 px-2 py-2 text-[11px] font-mono font-bold text-sky-800 hover:bg-sky-100 disabled:opacity-50"
-                >
-                  {r.label}
-                </button>
-              ))}
-            </div>
+          <div className="mt-4 pt-4 border-t border-slate-100 text-center">
+            <span className="text-[11px] font-mono text-slate-500">
+              Demo Credentials Pre-filled (Admin Account)
+            </span>
+          </div>
           </div>
         </div>
 
@@ -152,7 +119,6 @@ function LoginView({ onToken }: { onToken: (t: string) => void }) {
             ← Back to Landing Page
           </Link>
         </div>
-      </div>
     </div>
   )
 }
