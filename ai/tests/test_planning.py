@@ -52,14 +52,32 @@ def test_supplies_and_full_kinds():
     captured: dict = {}
     out = generate_plan(_mock_client(captured), "SUPPLIES", 14)
     assert [l["name"] for l in out["lines"]] == ["Diesel"]
-    assert out["lines"][0]["status"] == "OK" and out["lines"][0]["suggested_qty"] == 0.0
-    out = generate_plan(_mock_client({}), "FULL", 3)
-    assert len(out["lines"]) == 2 and out["lines"][0]["name"] == "Rice"  # urgency first
+    diesel = out["lines"][0]
+    # observed 5/day loses to the hardcoded diesel norm (8 L × 20 crew = 160)
+    assert diesel["avg_daily_use"] == 160.0 and diesel["rate_basis"] == "polar ration norm (hardcoded)"
+    assert diesel["status"] == "ORDER NOW" and diesel["suggested_qty"] == 2860.0
+    out = generate_plan(_mock_client({}), "FULL", 14)
+    assert [l["name"] for l in out["lines"]] == ["Diesel", "Rice"]  # urgency first: 3.1d < 4.0d
     try:
         generate_plan(_mock_client({}), "NOPE", 14)
         raise AssertionError("should raise")
     except ValueError:
         pass
+
+
+def test_ration_norms_floor_zero_history():
+    from planning import _lines_for, _norm_for
+
+    assert _norm_for("Cooking oil", "Food") == 0.06
+    assert _norm_for("Mystery widget", "Tools") == 0.2  # category fallback
+    assert _norm_for("Mystery widget", "Nope") == 0.5  # generic fallback
+    lines, risks = _lines_for("FOOD", 14, [
+        {"item_id": "o1", "name": "Cooking oil", "category": "Food", "on_hand": 120.0, "available": 120.0, "avg_daily_use": 0, "days_until_stockout": None, "at_risk": False},
+    ], [{"id": "o1", "unit": "L"}], crew_size=20)
+    oil = lines[0]
+    # 0.06 L × 20 crew = 1.2/day → 100 days, OK but never a "0 litres" plan
+    assert oil["avg_daily_use"] == 1.2 and oil["days_left"] == 100.0 and oil["status"] == "OK"
+    assert oil["rate_basis"] == "polar ration norm (hardcoded)"
 
 
 def test_plan_endpoint_validation():
