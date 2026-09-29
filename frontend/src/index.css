@@ -1,0 +1,131 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ─── Base Styles ─────────────────────────────────────────────────── */
+@layer base {
+  body {
+    background-color: #f8fafc;
+    background-image: 
+      radial-gradient(at 0% 0%, rgba(224, 242, 254, 0.6) 0px, transparent 50%),
+      radial-gradient(at 100% 0%, rgba(219, 234, 254, 0.5) 0px, transparent 50%),
+      radial-gradient(at 50% 100%, rgba(241, 245, 249, 0.8) 0px, transparent 50%);
+    color: #0f172a;
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  }
+}
+
+/* ─── Reusable Utility Components (Whitish Arctic Theme) ──────────── */
+@layer components {
+  /* Cards */
+  .card {
+    @apply rounded-2xl border border-slate-200/80 bg-white/90 p-5 shadow-sm 
+           backdrop-blur-md transition-all duration-300 hover:shadow-md hover:border-sky-300/60;
+  }
+
+  .card-title {
+    @apply text-xs font-bold font-mono tracking-wider text-sky-800 uppercase flex items-center gap-2;
+  }
+
+  /* Form Controls */
+  .input {
+    @apply w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2 text-sm text-slate-800 
+           placeholder-slate-400 shadow-sm transition-all focus:border-sky-500 focus:outline-none 
+           focus:ring-2 focus:ring-sky-500/20 disabled:bg-slate-100 disabled:text-slate-400;
+  }
+
+  /* Buttons */
+  .btn-primary {
+    @apply inline-flex items-center justify-center rounded-xl bg-sky-600 px-4 py-2 text-sm font-semibold 
+           text-white shadow-sm transition-all hover:bg-sky-500 hover:shadow-md active:scale-95 disabled:opacity-50;
+  }
+
+  .btn-aurora {
+    @apply inline-flex items-center justify-center rounded-xl bg-gradient-to-r from-sky-600 via-blue-600 to-indigo-600 
+           px-4 py-2 text-sm font-semibold text-white shadow-sm transition-all hover:shadow-md hover:brightness-110 
+           active:scale-95 disabled:opacity-50;
+  }
+
+  .btn-secondary {
+    @apply inline-flex items-center justify-center rounded-xl border border-slate-300 bg-white px-4 py-2 
+           text-sm font-medium text-slate-700 shadow-sm transition-all hover:bg-slate-50 hover:border-slate-400 
+           active:scale-95 disabled:opacity-50;
+  }
+
+  .btn-danger {
+    @apply inline-flex items-center justify-center rounded-xl bg-rose-600 px-4 py-2 text-sm font-semibold 
+           text-white shadow-sm transition-all hover:bg-rose-500 hover:shadow-md active:scale-95 disabled:opacity-50;
+  }
+
+  /* Tables */
+  .table {
+    @apply w-full text-left text-sm text-slate-700;
+  }
+
+  .table th {
+    @apply bg-slate-100/90 px-3.5 py-2.5 font-mono text-[11px] font-semibold tracking-wider text-slate-600 uppercase border-b border-slate-200;
+  }
+
+  .table td {
+    @apply border-b border-slate-100 px-3.5 py-2.5 transition-colors;
+  }
+
+  .table tr:hover td {
+    @apply bg-sky-50/50;
+  }
+
+  /* Dark-table alias mapped to clean white table */
+  .dark-table {
+    @apply w-full text-left text-sm text-slate-700;
+  }
+
+  .dark-table th {
+    @apply bg-slate-100 px-3.5 py-2.5 font-mono text-[11px] font-semibold tracking-wider text-slate-600 uppercase border-b border-slate-200;
+  }
+
+  .dark-table td {
+    @apply border-b border-slate-100 px-3.5 py-2.5 transition-colors;
+  }
+
+  .dark-table tr:hover td {
+    @apply bg-sky-50/50;
+  }
+
+  /* Status Badges */
+  .badge-active {
+    @apply inline-flex items-center gap-1.5 rounded-full bg-emerald-100 px-2.5 py-0.5 text-xs font-semibold text-emerald-800 border border-emerald-200;
+  }
+
+  .badge-warning {
+    @apply inline-flex items-center gap-1.5 rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-semibold text-amber-800 border border-amber-200;
+  }
+
+  .badge-critical {
+    @apply inline-flex items-center gap-1.5 rounded-full bg-rose-100 px-2.5 py-0.5 text-xs font-semibold text-rose-800 border border-rose-200;
+  }
+
+  .badge-info {
+    @apply inline-flex items-center gap-1.5 rounded-full bg-sky-100 px-2.5 py-0.5 text-xs font-semibold text-sky-800 border border-sky-200;
+  }
+
+  /* Gradient Text */
+  .gradient-text {
+    @apply bg-gradient-to-r from-sky-700 via-blue-700 to-indigo-800 bg-clip-text text-transparent;
+  }
+}
+
+/* ─── Map Libre Popups Light Theme Override ───────────────────────── */
+.maplibregl-popup-content {
+  background: #ffffff !important;
+  border-radius: 12px !important;
+  border: 1px solid #cbd5e1 !important;
+  box-shadow: 0 10px 25px rgba(15, 23, 42, 0.12) !important;
+  padding: 8px !important;
+}
+
+.maplibregl-popup-anchor-top .maplibregl-popup-tip {
+  border-bottom-color: #ffffff !important;
+}
+.maplibregl-popup-anchor-bottom .maplibregl-popup-tip {
+  border-top-color: #ffffff !important;
+}
