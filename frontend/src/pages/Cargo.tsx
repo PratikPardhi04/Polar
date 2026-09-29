@@ -185,6 +185,13 @@ export default function Cargo({ token }: { token: string }) {
                       <div className="flex items-center gap-3 font-mono text-[11px]">
                         <span className="text-slate-500">{p.weight_kg} kg</span>
                         <span className="rounded bg-sky-100 text-sky-800 px-1.5 py-0.5 border border-sky-200 font-bold">{p.status}</span>
+                        <button
+                          onClick={() => { setScan((s) => ({ ...s, id: p.id })); document.getElementById('qr-scan-id')?.focus() }}
+                          title="Load this package into the scanner below (avoids typos)"
+                          className="rounded bg-sky-600 px-2 py-0.5 font-bold text-white hover:bg-sky-700"
+                        >
+                          SCAN →
+                        </button>
                       </div>
                     </div>
                   ))}
@@ -200,9 +207,10 @@ export default function Cargo({ token }: { token: string }) {
             </div>
             <div className="grid gap-3 sm:grid-cols-4">
               <input
+                id="qr-scan-id"
                 value={scan.id}
                 onChange={(e) => setScan({ ...scan, id: e.target.value })}
-                placeholder="Package ID (e.g. BX-0042)"
+                placeholder="Package ID (e.g. BX-46-2026-000001 — use SCAN → above, never type it)"
                 className="input sm:col-span-2 font-mono text-xs"
               />
               <select
