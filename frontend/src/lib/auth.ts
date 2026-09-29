@@ -1,4 +1,11 @@
-export const API = (import.meta.env.VITE_API_URL as string) || 'http://localhost:8000'
+export function normalizeBase(raw: string): string {
+  let v = (raw || '').trim().replace(/\/+$/, '')
+  if (v && !/^[a-zA-Z][a-zA-Z0-9+.-]*:\/\//.test(v)) v = `https://${v}`
+  return v
+}
+
+export const API = normalizeBase((import.meta.env.VITE_API_URL as string) || 'http://localhost:8000')
+export const AI_URL = normalizeBase((import.meta.env.VITE_AI_URL as string) || 'http://localhost:8001')
 
 export function getToken(): string | null {
   return localStorage.getItem('polaris_token')

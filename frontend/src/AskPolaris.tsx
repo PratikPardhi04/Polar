@@ -1,7 +1,5 @@
 import { useState } from 'react'
-import { API } from './lib/auth'
-
-const AI = (import.meta.env.VITE_AI_URL as string) || 'http://localhost:8001'
+import { AI_URL as AI, API } from './lib/auth'
 
 type AskResult = {
   answer: string

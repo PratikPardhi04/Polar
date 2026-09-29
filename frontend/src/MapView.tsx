@@ -1,8 +1,7 @@
 import { useEffect, useRef } from 'react'
 import maplibregl from 'maplibre-gl'
 import 'maplibre-gl/dist/maplibre-gl.css'
-
-const API = (import.meta.env.VITE_API_URL as string) || 'http://localhost:8000'
+import { API } from './lib/auth'
 
 type Station = { code: string; name: string; latitude: number; longitude: number }
 type Mission = { id: string; objective: string; status: string }
