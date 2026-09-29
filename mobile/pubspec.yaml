@@ -1,0 +1,16 @@
+name: polaris_mobile
+description: POLARIS field app (offline-first). Full QR/sync/SOS lands in Phase 3 + 5.2.
+publish_to: "none"
+version: 0.1.0
+environment:
+  sdk: ">=3.0.0 <4.0.0"
+dependencies:
+  flutter:
+    sdk: flutter
+  sqflite: ^2.3.0
+  mobile_scanner: ^5.0.0
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+flutter:
+  uses-material-design: true
