@@ -82,3 +82,25 @@ def ask_llm(req: AskLlmRequest):
         return run_turn(req.question, thread_id=req.thread_id)
     except Exception as exc:
         raise HTTPException(status_code=502, detail=f"LLM agent run failed: {exc}")
+
+
+class PlanGenRequest(BaseModel):
+    kind: str = "FULL"  # FOOD | SUPPLIES | FULL
+    horizon_days: int = 14
+    backend_token: str = ""
+
+
+@app.post("/ai/plan/generate")
+def plan_generate(req: PlanGenRequest):
+    """Generate Plan page: deterministic consumption plan over live forecast +
+    inventory, saved as a DRAFT for human approval. Needs no LLM key."""
+    from planning import generate_plan
+
+    if req.kind.upper() not in ("FOOD", "SUPPLIES", "FULL"):
+        raise HTTPException(status_code=400, detail="kind must be FOOD, SUPPLIES or FULL")
+    try:
+        return generate_plan(ToolClient(token=req.backend_token), req.kind, req.horizon_days)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+    except Exception as exc:
+        raise HTTPException(status_code=502, detail=f"plan generation failed: {exc}")

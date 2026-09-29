@@ -8,6 +8,7 @@ const NAV = [
   { label: 'Personnel', to: '/app/personnel', icon: '👨‍🔬' },
   { label: 'Cargo', to: '/app/cargo', icon: '📦' },
   { label: 'Inventory', to: '/app/inventory', icon: '📈' },
+  { label: 'Generate Plan', to: '/app/plan', icon: '🧭' },
   { label: 'Field Missions', to: '/app/missions', icon: '🚩' },
   { label: 'SITREPs & AI', to: '/app/reports', icon: '📝' },
   { label: 'Audit & Log', to: '/app/audit', icon: '🛡️' },

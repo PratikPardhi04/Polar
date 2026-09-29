@@ -7,6 +7,7 @@ import MapView from './MapView'
 import { login } from './lib/auth'
 import Cargo from './pages/Cargo'
 import Dashboard from './pages/Dashboard'
+import GeneratePlan from './pages/GeneratePlan'
 import Inventory from './pages/Inventory'
 import Landing from './pages/Landing'
 import Missions from './pages/Missions'
@@ -195,6 +196,7 @@ export default function App() {
             <Route path="personnel" element={<Personnel token={token} />} />
             <Route path="cargo" element={<Cargo token={token} />} />
             <Route path="inventory" element={<Inventory token={token} />} />
+            <Route path="plan" element={<GeneratePlan token={token} />} />
             <Route path="missions" element={<Missions token={token} />} />
             <Route path="reports" element={<ReportsPage token={token} />} />
             <Route path="audit" element={<AuditPage token={token} />} />
