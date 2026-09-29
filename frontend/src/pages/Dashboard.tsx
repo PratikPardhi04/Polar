@@ -7,21 +7,32 @@ type Summary = {
   station: string
   personnel_total: number
   readiness_breakdown: Record<string, number>
+  cargo_in_transit: number
+  packages_in_transit: number
+  critical_inventory: number
+  watch_inventory: number
   open_incidents: number
-  critical_incidents: number
-  shipments_in_transit: number
-  low_stock_items: number
-  conflicts_unresolved: number
-  weather: { station: string; temp_c: number; wind_kph: number; condition: string; updated_at: string } | null
+  active_field_missions: number
+  action_required: number
+  network: string
+}
+
+type Weather = {
+  station_code: string
+  temp_c: number
+  wind_kph: number
+  condition: string
+  fetched_at: string | null
 }
 
 function AnimatedNumber({ value }: { value: number }) {
+  const safe = Number.isFinite(value) ? (value as number) : 0
   const [display, setDisplay] = useState(0)
   const prevVal = useRef(0)
 
   useEffect(() => {
     const start = prevVal.current
-    const end = value
+    const end = safe
     const duration = 800
     const startTime = performance.now()
 
@@ -44,18 +55,22 @@ function AnimatedNumber({ value }: { value: number }) {
 
 export default function Dashboard({ token }: { token: string }) {
   const [data, setData] = useState<Summary | null>(null)
+  const [weather, setWeather] = useState<Weather | null>(null)
   const [err, setErr] = useState('')
 
   useEffect(() => {
-    fetch(`${API}/api/v1/dashboard/summary`, {
-      headers: { Authorization: `Bearer ${token}` },
-    })
+    const h = { Authorization: `Bearer ${token}` }
+    fetch(`${API}/api/v1/dashboard/summary`, { headers: h })
       .then((r) => {
         if (!r.ok) throw new Error(`Dashboard API ${r.status}`)
         return r.json()
       })
       .then(setData)
       .catch((e) => setErr(String(e)))
+    fetch(`${API}/api/v1/weather/BHARATI`, { headers: h })
+      .then((r) => (r.ok ? r.json() : Promise.reject()))
+      .then(setWeather)
+      .catch(() => setWeather(null))
   }, [token])
 
   if (err) return <div className="card border-rose-300 bg-rose-50 text-rose-700 text-sm font-mono">{err}</div>
@@ -114,12 +129,12 @@ export default function Dashboard({ token }: { token: string }) {
       </div>
 
       {/* Sync Conflict Alert Bar */}
-      {data.conflicts_unresolved > 0 && (
+      {data.action_required > 0 && (
         <div className="flex items-center justify-between rounded-xl border border-amber-300 bg-amber-50 p-4 text-amber-900 shadow-xs">
           <div className="flex items-center gap-3">
             <span className="flex h-3 w-3 rounded-full bg-amber-500 animate-ping" />
             <span className="text-xs font-mono font-bold">
-              ⚠️ ATTENTION: {data.conflicts_unresolved} offline sync conflict(s) require manual resolution.
+              ⚠️ ATTENTION: {data.action_required} offline sync conflict(s) require manual resolution.
             </span>
           </div>
           <Link
@@ -167,9 +182,9 @@ export default function Dashboard({ token }: { token: string }) {
             <span className="text-3xl font-extrabold text-slate-900">
               <AnimatedNumber value={data.open_incidents} />
             </span>
-            {data.critical_incidents > 0 ? (
+            {data.open_incidents > 0 ? (
               <span className="text-xs font-mono text-rose-600 font-bold bg-rose-50 px-2 py-0.5 rounded border border-rose-200">
-                {data.critical_incidents} CRITICAL
+                {data.open_incidents} OPEN
               </span>
             ) : (
               <span className="text-xs font-mono text-emerald-600 font-medium">All Clear</span>
@@ -188,7 +203,7 @@ export default function Dashboard({ token }: { token: string }) {
           </div>
           <div className="mt-2 flex items-baseline gap-2">
             <span className="text-3xl font-extrabold text-slate-900">
-              <AnimatedNumber value={data.shipments_in_transit} />
+              <AnimatedNumber value={data.cargo_in_transit} />
             </span>
             <span className="text-xs font-mono text-sky-600 font-semibold">QR Tracked</span>
           </div>
@@ -205,7 +220,7 @@ export default function Dashboard({ token }: { token: string }) {
           </div>
           <div className="mt-2 flex items-baseline gap-2">
             <span className="text-3xl font-extrabold text-slate-900">
-              <AnimatedNumber value={data.low_stock_items} />
+              <AnimatedNumber value={data.critical_inventory} />
             </span>
             <span className="text-xs font-mono text-amber-600 font-semibold">Items Below Min</span>
           </div>
@@ -216,7 +231,7 @@ export default function Dashboard({ token }: { token: string }) {
       </div>
 
       {/* Station Weather Instrument Card */}
-      {data.weather && (
+      {weather && (
         <div className="card border-sky-200 bg-gradient-to-r from-sky-50 via-indigo-50/50 to-white">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex items-center gap-4">
@@ -226,18 +241,18 @@ export default function Dashboard({ token }: { token: string }) {
               <div>
                 <div className="flex items-center gap-2">
                   <span className="font-mono text-xs font-bold text-sky-800 uppercase">STATION METEOROLOGICAL TELEMETRY</span>
-                  <span className="rounded bg-sky-100 px-2 py-0.5 text-[10px] font-mono text-sky-700 font-bold">{data.weather.station}</span>
+                  <span className="rounded bg-sky-100 px-2 py-0.5 text-[10px] font-mono text-sky-700 font-bold">{weather.station_code}</span>
                 </div>
                 <div className="mt-1 flex items-baseline gap-3">
-                  <span className="text-2xl font-extrabold font-mono text-slate-900">{data.weather.temp_c}°C</span>
-                  <span className="text-xs text-slate-600 font-medium">Condition: <b className="text-slate-800">{data.weather.condition}</b></span>
-                  <span className="text-xs text-slate-600 font-medium">Wind: <b className="text-slate-800">{data.weather.wind_kph} km/h</b></span>
+                  <span className="text-2xl font-extrabold font-mono text-slate-900">{weather.temp_c}°C</span>
+                  <span className="text-xs text-slate-600 font-medium">Condition: <b className="text-slate-800">{weather.condition}</b></span>
+                  <span className="text-xs text-slate-600 font-medium">Wind: <b className="text-slate-800">{weather.wind_kph} km/h</b></span>
                 </div>
               </div>
             </div>
 
             <div className="text-[11px] font-mono text-slate-500">
-              Updated: {data.weather.updated_at ? new Date(data.weather.updated_at).toLocaleTimeString() : 'Just now'}
+              Updated: {weather.fetched_at ? new Date(weather.fetched_at).toLocaleTimeString() : 'Just now'}
             </div>
           </div>
         </div>
